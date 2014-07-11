@@ -1,0 +1,20 @@
+ORIGINAL					NEW
+				MediaStream.class
+MODE_MEDIARECORDER_API				mMediaRecorderMode
+MODE_MEDIACODEC_API				mMediaCodecMode
+mMode						mEncodingMode
+sSuggestedMode					mSuggestedEncodingMode
+mLss						mLocalServerSocket
+setAPI(int mode)				setMode(int mode)
+
+				AbstractPacketizer.class
+rtphl						RTP_HEADER_LENGTH
+socket						mSocket
+is						mIs
+buffer						mBuffer
+intervalBetweenReports				mInterval
+delta						mDelta
+report						mReport
+
+				RtpSocket.class
+mSsrc						mSSRC
