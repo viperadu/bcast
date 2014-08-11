@@ -16,34 +16,34 @@ import com.example.bcast.GlobalVariables;
 import com.example.bcast.packetizer.AbstractPacketizer;
 
 public abstract class MediaStream implements Stream {
-	
+
 	protected static final String TAG = "MediaStream";
 	protected static final boolean DEBUGGING = true;
-	
+
 	public static final int mMediaRecorderMode = 0x00;
 	public static final int mMediaCodecMode = 0x01;
-	
+
 	protected AbstractPacketizer mPacketizer;
-	
+
 	protected MediaRecorder mMediaRecorder;
 	protected MediaCodec mMediaCodec;
-	
-	protected boolean mStreaming = false;
+
+	protected boolean mStreaming = false, mConfigured = false;
 	protected int mEncodingMode = mMediaRecorderMode;
 	protected static int mSuggestedEncodingMode = mMediaRecorderMode;
 	private LocalServerSocket mLocalServerSocket = null;
 	protected LocalSocket mReceiver, mSender = null;
 	private int mSocketId;
-	
+
 	protected int mRtpPort = 0, mRtcpPort = 0;
 	protected InetAddress mDestination;
-	
+
 	static {
 		try {
 			Class.forName("android.media.MediaCodec");
 			mSuggestedEncodingMode = mMediaCodecMode;
 			GlobalVariables.MediaCodec = true;
-			if(DEBUGGING) {
+			if (DEBUGGING) {
 				Log.i(TAG, "Android API is 4.2 or newer");
 			}
 		} catch (ClassNotFoundException e) {
@@ -52,24 +52,28 @@ public abstract class MediaStream implements Stream {
 			Log.i(TAG, "Android API is older than 4.2");
 		}
 	}
-	
+
 	public MediaStream() {
 		mEncodingMode = mSuggestedEncodingMode;
 	}
-	
+
 	public void setMode(int mode) {
 		mEncodingMode = mode;
 	}
-	
+
 	@Override
 	public void start() throws IllegalStateException, IOException {
-		if(mDestination == null) {
+		if (mDestination == null) {
 			throw new IllegalStateException("No destination IP set");
 		}
-		if(mRtpPort <= 0 || mRtcpPort <= 0) {
+		if (mRtpPort <= 0 || mRtcpPort <= 0) {
 			throw new IllegalStateException("No destination RTP/RTCP ports set");
 		}
-		switch(mEncodingMode) {
+		
+		Log.e(TAG, "AudioQuality: " + GlobalVariables.audioQuality.bitRate + " bitRate and " + GlobalVariables.audioQuality.samplingRate + " sampling rate.");
+		Log.e(TAG, "VideoQuality: " + GlobalVariables.videoQuality.resX + "x" + GlobalVariables.videoQuality.resY + ", " + GlobalVariables.videoQuality.framerate + " fps and " + GlobalVariables.videoQuality.bitrate + " bitrate.");
+		
+		switch (mEncodingMode) {
 		case mMediaRecorderMode:
 			encodeWithMediaRecorder();
 			break;
@@ -82,10 +86,10 @@ public abstract class MediaStream implements Stream {
 	@Override
 	@SuppressLint("NewApi")
 	public void stop() {
-		if(mStreaming) {
+		if (mStreaming) {
 			mPacketizer.stop();
 			try {
-				if(mEncodingMode == mMediaRecorderMode) {
+				if (mEncodingMode == mMediaRecorderMode) {
 					mMediaRecorder.stop();
 					mMediaRecorder.release();
 					mMediaRecorder = null;
@@ -95,18 +99,28 @@ public abstract class MediaStream implements Stream {
 					mMediaCodec = null;
 				}
 				closeSockets();
-			} catch (Exception e) {}
+			} catch (Exception e) {
+			}
 			mStreaming = false;
 		}
 	}
-	
+
 	protected abstract void encodeWithMediaRecorder() throws IOException;
+
 	protected abstract void encodeWithMediaCodec() throws IOException;
 
-//	@Override
-//	public void setTimeToLive(int ttl) {
-//		mPacketizer.setTimeToLive(ttl);
-//	}
+	// @Override
+	// public void setTimeToLive(int ttl) {
+	// mPacketizer.setTimeToLive(ttl);
+	// }
+
+	public synchronized void configure() throws IllegalStateException,
+			IOException {
+		if (mStreaming)
+			throw new IllegalStateException("Can't be called while streaming.");
+		mEncodingMode = mSuggestedEncodingMode;
+		mConfigured = true;
+	}
 
 	@Override
 	public void setDestinationAddress(InetAddress dest) {
@@ -118,7 +132,7 @@ public abstract class MediaStream implements Stream {
 		mRtpPort = dport;
 		mRtcpPort = dport + 1;
 	}
-	
+
 	public void setDestinationPorts(int rtpPort, int rtcpPort) {
 		mRtpPort = rtpPort;
 		mRtcpPort = rtcpPort;
@@ -126,20 +140,16 @@ public abstract class MediaStream implements Stream {
 
 	@Override
 	public int[] getLocalPorts() {
-		return new int[] {
-				this.mPacketizer.getRtpSocket().getLocalPort(),
-				this.mPacketizer.getRtcpSocket().getLocalPort()
-		};
+		return new int[] { this.mPacketizer.getRtpSocket().getLocalPort(),
+				this.mPacketizer.getRtcpSocket().getLocalPort() };
 	}
 
 	@Override
 	public int[] getDestinationPorts() {
-		return new int[] {
-				mRtpPort,
-				mRtcpPort
-		};
+		return new int[] { mRtpPort, mRtcpPort };
 	}
-//	public abstract int[] getDestinationPorts();
+
+	// public abstract int[] getDestinationPorts();
 
 	@Override
 	public int getSSRC() {
@@ -148,7 +158,7 @@ public abstract class MediaStream implements Stream {
 
 	@Override
 	public long getBitrate() {
-		if(mStreaming) {
+		if (mStreaming) {
 			return mPacketizer.getRtpSocket().getBitrate();
 		} else {
 			return 0;
@@ -159,28 +169,30 @@ public abstract class MediaStream implements Stream {
 	public boolean isStreaming() {
 		return mStreaming;
 	}
-	
+
 	public AbstractPacketizer getPacketizer() {
 		return mPacketizer;
 	}
-	
+
 	protected void createSockets() throws IOException {
 		final String LOCAL_ADDR = "bcast-";
-		for(int i=0; i<100; i++) {
+		for (int i = 0; i < 100; i++) {
 			try {
 				mSocketId = new Random().nextInt();
-				mLocalServerSocket = new LocalServerSocket(LOCAL_ADDR + mSocketId);
+				mLocalServerSocket = new LocalServerSocket(LOCAL_ADDR
+						+ mSocketId);
 				break;
-			} catch (IOException e) {}
+			} catch (IOException e) {
+			}
 		}
-		
+
 		mReceiver = new LocalSocket();
 		mReceiver.connect(new LocalSocketAddress(LOCAL_ADDR + mSocketId));
-		mReceiver.setReceiveBufferSize(1000000); //500000
+		mReceiver.setReceiveBufferSize(1000000); // 500000
 		mSender = mLocalServerSocket.accept();
-		mSender.setSendBufferSize(1000000); //500000
+		mSender.setSendBufferSize(1000000); // 500000
 	}
-	
+
 	protected void closeSockets() {
 		try {
 			mSender.close();
@@ -189,8 +201,10 @@ public abstract class MediaStream implements Stream {
 			mReceiver = null;
 			mLocalServerSocket.close();
 			mLocalServerSocket = null;
-		} catch (Exception e) {}
+		} catch (Exception e) {
+		}
 	}
 
-	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
+	public abstract String generateSessionDescription()
+			throws IllegalStateException, IOException;
 }

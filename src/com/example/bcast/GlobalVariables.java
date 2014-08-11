@@ -1,19 +1,14 @@
 package com.example.bcast;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.util.Random;
+import java.util.List;
 
 import android.annotation.SuppressLint;
+import android.hardware.Camera.Size;
 import android.media.MediaRecorder;
-import android.util.Log;
 
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.ImageLoader;
 import com.example.bcast.audio.AudioQuality;
-import com.example.bcast.session.Session;
 import com.example.bcast.video.MP4Config;
 import com.example.bcast.video.VideoQuality;
 
@@ -29,26 +24,36 @@ import com.example.bcast.video.VideoQuality;
 //	public static final String destAddress = "192.168.0.8";	// Birmingham Ethernet
 	
 	public static final int VIDEO_PORT = 25123;
-//	public static final int SESSION_P = 25124;
 	public static final int SESSION_PORT = 25120;
 	public static final int AUDIO_PORT = 25121;
+	public static final int JSON_PORT = 25118;
 	public static final boolean DEBUGGING = true;
 	public static final String TAG = "bcast";
-	public static MP4Config config;
+
+	public volatile static int audioConfig = 0;
+	public volatile static MP4Config config = null;
 	
-	public static String TITLE = "first";
-	public static int[] ports;
+	public static String TITLE;
+	public static int[] ports = new int[]{0, 0, 0, 0};
 	
-	public static int SSRC = new Random().nextInt();
-	public static VideoQuality videoQuality = VideoQuality.parseQuality("2000-20-640-480");
-	public static AudioQuality audioQuality = AudioQuality.parseQuality("8-32000");
+	public static int SSRC;
+	public static VideoQuality videoQuality;
+	public static AudioQuality audioQuality;
 	
 	public static int VideoEncoder = MediaRecorder.VideoEncoder.H264;
-	public static int AudioEncoder = MediaRecorder.AudioEncoder.AMR_NB;
+	public static int AudioEncoder = MediaRecorder.AudioEncoder.AAC;
+	
+	public static List<Size> videoResolutions;
+	public static List<Integer> videoFramerates;
+	
+	public static ImageLoader imageLoader;
+	public static RequestQueue requestQueue;
 	
 	public static boolean MediaCodec = true;
 
 	private static boolean error = false;
+
+	public static int bufferLength;
 	
 /*	public static boolean sendObjects(final Session se, final MP4Config config) throws IOException {
 		error = false;

@@ -16,6 +16,7 @@ import android.util.Log;
 import com.example.bcast.GlobalVariables;
 import com.example.bcast.audio.AudioStream;
 import com.example.bcast.stream.Stream;
+import com.example.bcast.video.H264;
 import com.example.bcast.video.MP4Config;
 import com.example.bcast.video.VideoStream;
 
@@ -164,6 +165,14 @@ public class Session implements Serializable {
 			return true;
 		} else {
 			return false;
+		}
+	}
+	
+	public MP4Config getConfig() throws IOException {
+		if(mVideoStream instanceof H264) {
+			return ((H264) mVideoStream).testH264();
+		} else {
+			return null;
 		}
 	}
 	

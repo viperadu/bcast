@@ -11,8 +11,7 @@ import java.util.HashMap;
 import android.util.Base64;
 import android.util.Log;
 
-public class MP4Config implements Serializable {
-	private static final long serialVersionUID = 1L;
+public class MP4Config {
 	private MP4Parser mp4Parser = null;
 	private String mProfileLevel, mPPS, mSPS;
 
@@ -52,7 +51,7 @@ public class MP4Config implements Serializable {
 	}
 }
 
-class MP4Parser implements Serializable {
+class MP4Parser {
 	public static final String TAG = "MP4Parser";
 	public static final boolean DEBUGGING = true;
 

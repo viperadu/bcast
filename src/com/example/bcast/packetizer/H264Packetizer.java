@@ -1,6 +1,8 @@
 package com.example.bcast.packetizer;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import android.util.Log;
 
@@ -16,6 +18,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	private Statistics stats = new Statistics();
 	private byte[] sps = null, pps = null;
 	private int count = 0;
+	
+	//FOR DEBUGGING
+	SimpleDateFormat dateFormat;
 
 	public H264Packetizer() throws IOException {
 		super();
@@ -25,6 +30,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	@Override
 	public void start() throws IOException {
 		if (t == null) {
+			// TODO: delete this, for debugging only
+			dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
 			t = new Thread(this);
 			t.start();
 		}
@@ -83,7 +90,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				}
 				
 				delta2 += duration / 1000000;
-				if(delta2 > 5000) {
+				if(delta2 > 3000) {
 					delta2 = 0;
 					if(sps != null) {
 						mBuffer = mSocket.requestBuffer();
@@ -116,7 +123,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		int sum = 1, len = 0, type;
 		byte[] header = new byte[5];
 		fill(header, 0, 5);
+
 		naluLength = header[3] & 0xFF | (header[2] & 0xFF) << 8 | (header[1] & 0xFF) << 16 | (header[0] & 0xFF) << 24;
+//Log.i(TAG, "[" + dateFormat.format(new Date()) + "]" + "naluLength = " + naluLength);
 		
 		if(naluLength > 100000 || naluLength < 0) {
 			resync();
@@ -143,20 +152,35 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			header[1] += 0x80;
 			header[0] = (byte) ((header[4] & 0x60) & 0xFF);
 			header[0] += 28;
-			
+//Log.i(TAG, "[" + dateFormat.format(new Date()) + "]");
+//Log.i(TAG, "header[0]=" + String.format("%8s", Integer.toBinaryString((header[0] + 256) % 256)).replace(' ', '0') + 
+//		  " header[1]=" + String.format("%8s", Integer.toBinaryString((header[1] + 256) % 256)).replace(' ', '0'));
+
+String line = "", line2 = "";
 			while(sum < naluLength) {
 				mBuffer = mSocket.requestBuffer();
 				mBuffer[RTP_HEADER_LENGTH] = header[0];
 				mBuffer[RTP_HEADER_LENGTH + 1] = header[1];
 				mSocket.updateTimestamp(ts);
-				if((len = fill(mBuffer, RTP_HEADER_LENGTH + 2, naluLength - sum > MAXPACKETSIZE - RTP_HEADER_LENGTH - 2 ? MAXPACKETSIZE - RTP_HEADER_LENGTH - 2 : naluLength - sum)) < 0) return; sum += len;
+				if((len = fill(mBuffer, RTP_HEADER_LENGTH + 2, naluLength - sum > MAXPACKETSIZE - RTP_HEADER_LENGTH - 2 ? MAXPACKETSIZE - RTP_HEADER_LENGTH - 2 : naluLength - sum)) < 0) {
+					return;
+				}
+				sum += len;
 				if(sum >= naluLength) {
 					mBuffer[RTP_HEADER_LENGTH + 1] += 0x40;
 					mSocket.markNextPacket();
 				}
 				super.send(len + RTP_HEADER_LENGTH + 2);
+
 				header[1] = (byte) (header[1] & 0x7F);
+				
+				// TODO: delete this
+				line += (len + RTP_HEADER_LENGTH + 2) + " ";
+				line2 += "[" + RTP_HEADER_LENGTH + "]=" + String.format("%8s", Integer.toBinaryString((mBuffer[RTP_HEADER_LENGTH] + 256) % 256)).replace(' ', '0');
+				line2 += "[" + (RTP_HEADER_LENGTH + 1) + "]=" + String.format("%8s", Integer.toBinaryString((mBuffer[RTP_HEADER_LENGTH+1] + 256) % 256)).replace(' ', '0') + " | "; 
 			}
+//Log.i(TAG, line);
+//Log.i(TAG, line2.substring(0, line2.lastIndexOf(" | ")));
 		}
 	}
 	

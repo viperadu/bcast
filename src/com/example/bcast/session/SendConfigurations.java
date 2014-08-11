@@ -11,6 +11,7 @@ import android.util.Log;
 
 import com.example.bcast.GlobalVariables;
 import com.example.bcast.audio.AACStream;
+import com.example.bcast.video.H264;
 import com.example.bcast.video.MP4Config;
 
 public class SendConfigurations extends AsyncTask<Object, Void, int[]> {
@@ -19,22 +20,15 @@ public class SendConfigurations extends AsyncTask<Object, Void, int[]> {
 	
 	@Override
 	protected int[] doInBackground(Object... params) {
-//		Session session = ((Session) params[0]).clone();
-//		Session session = new Session();
-//		session.removeVideoTrack();
-//		session.removeAudioTrack();
 		int[] ports = null;
 		Session session = ((Session) params[0]).clone();
-		if(session.getAudioTrack().getClass().getName().contains("AACStream")) {
+		if(session.getAudioTrack() instanceof AACStream/*session.getAudioTrack().getClass().getName().contains("AACStream")*/) {
 			((AACStream)session.getAudioTrack()).setAudioRecord(null);
 			if(DEBUGGING) {
 				Log.d(TAG, session.getAudioTrack().getClass().getName());
 				Log.d(TAG, "AudioRecord set to null");
 			}
 		}
-		MP4Config config = (MP4Config) params[1];
-//		VideoQuality videoQuality = (VideoQuality) params[2];
-//		AudioQuality audioQuality = (AudioQuality) params[3];
 		
 		Socket s = null;
 		ObjectOutputStream os = null;
@@ -45,9 +39,26 @@ public class SendConfigurations extends AsyncTask<Object, Void, int[]> {
 			is = new ObjectInputStream(s.getInputStream());
 			
 			os.writeObject(GlobalVariables.TITLE);
-			os.writeObject(session);			
-			os.writeObject(config);
+			os.writeObject(GlobalVariables.bufferLength);
+			os.writeObject(session);
 			os.writeObject(GlobalVariables.SSRC);
+			
+			if(session.getAudioTrack() != null) {
+				os.writeObject(GlobalVariables.audioQuality);
+				if(session.getAudioTrack() instanceof AACStream) {
+					os.writeObject(GlobalVariables.audioConfig);
+				}
+			}
+			
+			if(session.getVideoTrack() != null) {
+				os.writeObject(GlobalVariables.videoQuality);
+				if(session.getVideoTrack() instanceof H264) {
+//					os.writeObject(GlobalVariables.config);
+					os.writeObject(GlobalVariables.config.getProfileLevel());
+					os.writeObject(GlobalVariables.config.getB64PPS());
+					os.writeObject(GlobalVariables.config.getB64SPS());
+				}
+			}
 			
 			ports = (int[])is.readObject();
 			if(DEBUGGING) {

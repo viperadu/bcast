@@ -8,5 +8,34 @@
     <string name="quit">Quit</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
+    <string name="enable">Enable</string>
+    <string name="disable">Disable</string>
+    <string name="watch">Watch</string>
+    <string name="record">Record</string>
+    <string name="settings">Settings</string>
+    <string name="general_settings">General Settings</string>
+    
+    <string name="audio_settings_header">Audio settings</string>
+    <string name="audio_enable">Audio enable</string>
+    <string name="audio_enable_summary">Enable or disable audio on your broadcast</string>
+    <string name="audio_encoder">Audio encoder</string>
+    <string name="dialog_title_audio_encoder">Choose the audio encoder that the application will use</string>
+    <string name="audio_sampling_rate">Sampling rate</string>
+    <string name="audio_sampling_rate_summary">Choose the sampling rate that the audio encoder will use</string>
+    <string name="dialog_title_audio_sampling_rate">Sampling rate</string>
+    <string name="audio_bitrate">Bitrate</string>
+    <string name="video_settings_header">Video settings</string>
+    <string name="video_enable">Video enable</string>
+    <string name="video_enable_summary">Enable or disable video on your broadcast</string>
+    <string name="video_encoder">Video encoder</string>
+    <string name="video_encoder_summary">Choose the video encoder that the application will use</string>
+    <string name="dialog_title_video_encoder">Video encoder</string>
+    <string name="video_resolution">Resolution</string>
+    <string name="video_resolution_summary">Choose the resolution you want for your video stream</string>
+    <string name="dialog_title_video_resolution">Resolution</string>
+    <string name="video_framerate">Framerate</string>
+    <string name="video_framerate_summary">Choose the framerate you want for your video stream</string>
+    <string name="dialog_title_video_framerate">Framerate</string>
 
+	
 </resources>

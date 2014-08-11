@@ -29,7 +29,7 @@ import com.example.bcast.stream.MediaStream;
 public abstract class VideoStream extends MediaStream {
 	protected final static String TAG = "VideoStream";
 	
-	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
+	public VideoQuality mQuality = GlobalVariables.videoQuality;//VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
 	protected SurfaceHolder.Callback mSurfaceHolderCallback;
 	protected SurfaceHolder mSurfaceHolder = null;
 	protected int mVideoEncoder, mCameraId = 0;
@@ -275,6 +275,8 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
 		
+Log.i(TAG, "MediaRecorder started with: " + mQuality.resX + "x" + mQuality.resY + " at " + mQuality.framerate + " fps and " + mQuality.bitrate + " bitrate.");
+		
 		try {
 //			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 			mPacketizer.setDestination(mDestination, GlobalVariables.ports[2], GlobalVariables.ports[3]);
@@ -343,7 +345,6 @@ public abstract class VideoStream extends MediaStream {
 	
 	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
 	
-	@SuppressWarnings("deprecation")
 	protected synchronized void createCamera() throws RuntimeException, IOException {
 		if(mSurfaceHolder == null || mSurfaceHolder.getSurface() == null || !mSurfaceReady) {
 			if(GlobalVariables.DEBUGGING) {
@@ -375,11 +376,22 @@ public abstract class VideoStream extends MediaStream {
 			});
 			Parameters parameters = mCamera.getParameters();
 			
+			//TODO: delete this, only for debugging
+			List<int[]> a = parameters.getSupportedPreviewFpsRange();
+			for(int[] list : a) {
+				Log.i(TAG, "[" + list[0] + "-" + list[1] + "]");
+			}
+			
+			
 			if(mEncodingMode == mMediaCodecMode) {
 				getClosestSupportedQuality(parameters);
 				parameters.setPreviewFormat(ImageFormat.YV12);
 				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				parameters.setPreviewFrameRate(mQuality.framerate);
+//				parameters.setPreviewFrameRate(mQuality.framerate);
+				parameters.setPreviewFpsRange(mQuality.framerate * 1000, mQuality.framerate * 1000);
+			} else {
+				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+				parameters.setPreviewFpsRange(mQuality.framerate * 1000, mQuality.framerate * 1000);
 			}
 			
 //			if(mFlashState) {
@@ -404,7 +416,6 @@ public abstract class VideoStream extends MediaStream {
 		}
 	}
 	
-	@SuppressWarnings("deprecation")
 	protected synchronized void createCamera(SurfaceView surfaceView) throws RuntimeException, IOException {
 		SurfaceHolder surfaceHolder = surfaceView.getHolder();
 		if(surfaceHolder == null || surfaceHolder.getSurface() == null) {
@@ -440,7 +451,8 @@ public abstract class VideoStream extends MediaStream {
 				getClosestSupportedQuality(parameters);
 				parameters.setPreviewFormat(ImageFormat.YV12);
 				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				parameters.setPreviewFrameRate(mQuality.framerate);
+//				parameters.setPreviewFrameRate(mQuality.framerate);
+				parameters.setPreviewFpsRange(mQuality.framerate, mQuality.framerate);
 			}
 			
 //			if(mFlashState) {

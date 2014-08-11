@@ -60,8 +60,10 @@ public class H264 extends VideoStream implements Serializable {
 	public synchronized void start() throws IllegalStateException, IOException {
 		MP4Config config = null;
 		if(GlobalVariables.config == null) {
-			config = testH264();
-			GlobalVariables.config = config;
+			GlobalVariables.config = testH264();
+			Log.i(TAG, "profile level=" + GlobalVariables.config.getProfileLevel());
+			Log.i(TAG, "sps=" + GlobalVariables.config.getB64SPS());
+			Log.i(TAG, "pps=" + GlobalVariables.config.getB64PPS());
 		} else {
 			config = GlobalVariables.config;
 		}
@@ -70,19 +72,22 @@ public class H264 extends VideoStream implements Serializable {
 //		Log.e("H264", "sps=" + config.getB64SPS());
 //		Log.e("H264", "pps=" + config.getB64PPS());
 		
-		byte[] pps = Base64.decode(config.getB64PPS(), Base64.NO_WRAP);
-		byte[] sps = Base64.decode(config.getB64SPS(), Base64.NO_WRAP);
+		byte[] pps = Base64.decode(GlobalVariables.config.getB64PPS(), Base64.NO_WRAP);
+		byte[] sps = Base64.decode(GlobalVariables.config.getB64SPS(), Base64.NO_WRAP);
 		((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
 		super.start();
 	}
 
 	public MP4Config testH264() throws IllegalStateException, IOException {
-		if(mSettings != null) {
-			if(mSettings.contains("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY)) {
-				String[] s = mSettings.getString("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY, "").split(",");
-				return new MP4Config(s[0], s[1], s[2]);
-			}
-		}
+//		if(mSettings != null) {
+//			if(mSettings.contains("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY)) {
+//				String[] s = mSettings.getString("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY, "").split(",");
+//				return new MP4Config(s[0], s[1], s[2]);
+//			}
+//		}
+		try {
+			Thread.sleep(500);
+		} catch(InterruptedException ignore) {}
 		
 		if(!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("External storage error!");
@@ -95,7 +100,6 @@ public class H264 extends VideoStream implements Serializable {
 		}
 //			boolean savedFlashState = mFlashState;
 //			mFlashState = false;
-		
 		createCamera();
 		if(mPreviewStarted) {
 			lockCamera();
@@ -106,7 +110,7 @@ public class H264 extends VideoStream implements Serializable {
 		}
 		
 		try {
-			Thread.sleep(5000);
+			Thread.sleep(200);
 		} catch(InterruptedException e1) {
 			e1.printStackTrace();
 		}
@@ -147,15 +151,15 @@ public class H264 extends VideoStream implements Serializable {
 		mMediaRecorder.start();
 		
 		try {
-			if(mLock.tryAcquire(6, TimeUnit.SECONDS)) {
+			if(mLock.tryAcquire(1, TimeUnit.SECONDS)) {
 				if(DEBUGGING) {
 					Log.d(TAG, "MediaRecorder callback was called");
 				}
 				Thread.sleep(400);
 			} else {
-				if(DEBUGGING) {
-					Log.d(TAG, "MediaRecorder callback was not called after 6 seconds");
-				}
+//				if(DEBUGGING) {
+//					Log.d(TAG, "MediaRecorder callback was not called after 6 seconds");
+//				}
 			}
 		} catch (InterruptedException e) {
 			if(DEBUGGING) {
@@ -189,7 +193,7 @@ public class H264 extends VideoStream implements Serializable {
 		return config;
 	}
 	
-	public MP4Config testH264(SurfaceView surfaceView) throws IllegalStateException, IOException {
+	/*public MP4Config testH264(SurfaceView surfaceView) throws IllegalStateException, IOException {
 		if(mSettings != null) {
 			if(mSettings.contains("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY)) {
 				String[] s = mSettings.getString("h264" + mQuality.framerate + "," + mQuality.resX + "," + mQuality.resY, "").split(",");
@@ -298,6 +302,6 @@ public class H264 extends VideoStream implements Serializable {
 			editor.commit();
 		}
 		return config;
-	}
+	}*/
 
 }

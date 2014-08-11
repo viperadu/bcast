@@ -1,9 +1,19 @@
 package com.example.bcast.video;
 
 import java.io.Serializable;
+import java.util.Iterator;
+import java.util.List;
+
+import android.hardware.Camera;
+import android.hardware.Camera.Size;
+import android.util.Log;
 
 public class VideoQuality implements Serializable {
-	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(640, 480, 15, 500000);
+	
+	private static final long serialVersionUID = 1L;
+	
+	private static final String TAG = "VideoQuality";
+//	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(640, 480, 15, 500000);
 	
 	public int resX = 0;
 	public int resY = 0;
@@ -66,4 +76,43 @@ public class VideoQuality implements Serializable {
 		}
 		return videoQuality;
 	}
+	
+	public static VideoQuality determineClosestSupportedResolution(Camera.Parameters parameters, VideoQuality quality) {
+		VideoQuality v = quality.clone();
+		int minDist = Integer.MAX_VALUE;
+		String supportedSizesStr = "Supported resolutions: ";
+		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
+		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
+			Size size = it.next();
+			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
+			int dist = Math.abs(quality.resX - size.width);
+			if (dist<minDist) {
+				minDist = dist;
+				v.resX = size.width;
+				v.resY = size.height;
+			}
+		}
+		Log.v(TAG, supportedSizesStr);
+		if (quality.resX != v.resX || quality.resY != v.resY) {
+			Log.v(TAG,"Resolution modified: "+quality.resX+"x"+quality.resY+"->"+v.resX+"x"+v.resY);
+		}
+		
+		return v;
+	}
+
+	public static int[] determineMaximumSupportedFramerate(Camera.Parameters parameters) {
+		int[] maxFps = new int[]{0,0};
+		String supportedFpsRangesStr = "Supported frame rates: ";
+		List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
+		for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
+			int[] interval = it.next();
+			supportedFpsRangesStr += interval[0]/1000+"-"+interval[1]/1000+"fps"+(it.hasNext()?", ":"");
+			if (interval[1]>maxFps[1] || (interval[0]>maxFps[0] && interval[1]==maxFps[1])) {
+				maxFps = interval; 
+			}
+		}
+		Log.v(TAG, supportedFpsRangesStr);
+		return maxFps;
+	} 
+
 }

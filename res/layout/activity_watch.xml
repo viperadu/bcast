@@ -4,11 +4,10 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 
-    <SurfaceView
-        android:id="@+id/camera_view"
+     <ListView
+        android:id="@+id/available_videos"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_margin="20dp"
-        android:gravity="center" />
+        android:dividerHeight="5dp" />
 
 </LinearLayout>

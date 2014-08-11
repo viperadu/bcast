@@ -16,13 +16,20 @@
             android:id="@+id/button_1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Media Recorder" />
+            android:text="@string/watch" />
         
         <Button 
             android:id="@+id/button_2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Media Codec" />
+            android:text="@string/record" />
+        
+        <Button
+            android:id="@+id/button_3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/settings" />
+        
     </LinearLayout>
 
 </FrameLayout>

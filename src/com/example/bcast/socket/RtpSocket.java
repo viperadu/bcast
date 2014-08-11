@@ -4,11 +4,11 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import android.os.SystemClock;
+import android.util.Log;
 
 public class RtpSocket implements Runnable {
 	public static final String TAG = "RtpSocket";
@@ -54,6 +54,7 @@ public class RtpSocket implements Runnable {
 		}
 		
 		mSocket = new DatagramSocket();
+		Log.i(TAG, "Socket port=" + mSocket.getLocalPort());
 //		mSocket = new MulticastSocket();
 		mTime = mOldTime = SystemClock.elapsedRealtime();
 	}
@@ -106,6 +107,19 @@ public class RtpSocket implements Runnable {
 		mBuffers[mBufferIn][1] &= 0x7F;
 		return mBuffers[mBufferIn];
 	}
+	
+	public void commitBuffer() throws IOException {
+
+		if (mThread == null) {
+			mThread = new Thread(this);
+			mThread.start();
+		}
+		
+		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+		mBufferCommitted.release();
+
+	}	
+
 	
 	public void commitBuffer(int length) throws IOException {
 		updateSequence();

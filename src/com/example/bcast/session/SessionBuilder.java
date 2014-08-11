@@ -97,7 +97,7 @@ public class SessionBuilder {
 			AudioStream audio = session.getAudioTrack();
 			audio.setAudioQuality(AudioQuality.merge(mAudioQuality,
 					audio.getAudioQuality()));
-			audio.setDestinationPorts(GlobalVariables.ports[0], GlobalVariables.ports[1]);
+//			audio.setDestinationPorts(GlobalVariables.ports[0], GlobalVariables.ports[1]);
 		}
 		
 		if (session.getVideoTrack() != null) {
@@ -106,7 +106,7 @@ public class SessionBuilder {
 			video.setVideoQuality(VideoQuality.merge(mVideoQuality,
 					video.getVideoQuality()));
 			video.setPreviewDisplay(mSurfaceHolder);
-			video.setDestinationPorts(GlobalVariables.ports[2],GlobalVariables.ports[3]);
+//			video.setDestinationPorts(GlobalVariables.ports[2],GlobalVariables.ports[3]);
 		}
 
 		return session;

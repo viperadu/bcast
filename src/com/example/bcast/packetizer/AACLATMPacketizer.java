@@ -44,7 +44,7 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 	}
 	
 	public void setSamplingRate(int samplingRate) {
-		this.samplingRate = samplingRate;
+//		this.samplingRate = samplingRate;
 		mSocket.setClockFrequency(samplingRate);
 	}
 	
@@ -55,7 +55,8 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 		}
 		
 		int length = 0;
-		long oldtime = SystemClock.elapsedRealtime(), now = oldtime;
+//		long oldtime = SystemClock.elapsedRealtime(), now = oldtime;
+		long oldts;
 		BufferInfo bufferInfo;
 		try {
 			while(!Thread.interrupted()) {
@@ -63,7 +64,15 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 				length = mIs.read(mBuffer, RTP_HEADER_LENGTH + 4, MAXPACKETSIZE - (RTP_HEADER_LENGTH + 4));
 				if(length > 0) {
 					bufferInfo = ((MediaCodecInputStream)mIs).getLastBufferInfo();
+					oldts = ts;
 					ts = bufferInfo.presentationTimeUs * 1000;
+					if(oldts > ts) {
+						mSocket.commitBuffer();
+						continue;
+					}
+					
+					
+					
 					mSocket.markNextPacket();
 					mSocket.updateTimestamp(ts);
 					
@@ -77,14 +86,8 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 					mBuffer[RTP_HEADER_LENGTH + 3] |= 0x00;
 					
 					send(RTP_HEADER_LENGTH + length + 4);
-				}
-				
-				now = SystemClock.elapsedRealtime();
-				if(mInterval > 0) {
-					if(now - oldtime >= mInterval) {
-						oldtime = now;
-						mReport.send(System.nanoTime(), ts * samplingRate / 1000000000L);
-					}
+				} else {
+					mSocket.commitBuffer();
 				}
 			}
 		} catch(IOException e) {

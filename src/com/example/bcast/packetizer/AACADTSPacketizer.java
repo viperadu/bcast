@@ -88,13 +88,13 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				
 				ts += 1024L*1000000000L/samplingRate;
 				
-				now = SystemClock.elapsedRealtime();
-				if(mInterval > 0) {
-					if(now - oldtime >= mInterval) {
-						oldtime = now;
-						mReport.send(System.nanoTime(), ts * samplingRate / 1000000000L);
-					}
-				}
+//				now = SystemClock.elapsedRealtime();
+//				if(mInterval > 0) {
+//					if(now - oldtime >= mInterval) {
+//						oldtime = now;
+//						mReport.send(System.nanoTime(), ts * samplingRate / 1000000000L);
+//					}
+//				}
 				
 				sum = 0;
 				while(sum < frameLength) {

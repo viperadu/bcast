@@ -13,7 +13,7 @@ public abstract class AudioStream extends MediaStream {
 	protected int mAudioSource;
 	protected int mOutputFormat;
 	protected int mAudioEncoder;
-	protected AudioQuality mQuality = AudioQuality.DEFAULT_AUDIO_QUALITY.clone();
+	public AudioQuality mQuality = GlobalVariables.audioQuality;// = AudioQuality.DEFAULT_AUDIO_QUALITY.clone();
 	
 	public AudioStream() {
 		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);

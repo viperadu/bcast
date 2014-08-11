@@ -28,6 +28,7 @@ public class AACStream extends AudioStream implements Serializable {
 	private static final long serialVersionUID = 1L;
 	public static final String TAG = "AACStream";
 	public static final boolean DEBUGGING = true;
+	private boolean configured = false;
 
 	private static final String[] AUDIO_OBJECT_TYPES = { "NULL", // 0
 			"AAC Main", // 1
@@ -36,7 +37,8 @@ public class AACStream extends AudioStream implements Serializable {
 			"AAC LTP (Long Term Prediction)" // 4
 	};
 
-	public static final int[] AUDIO_SAMPLING_RATES = { 96000, // 0
+	public static final int[] AUDIO_SAMPLING_RATES = { 
+			96000, // 0
 			88200, // 1
 			64000, // 2
 			48000, // 3
@@ -54,7 +56,8 @@ public class AACStream extends AudioStream implements Serializable {
 			-1, // 15
 	};
 
-	private int mActualSamplingRate;
+	private String mSessionDescription;
+//	private int mActualSamplingRate;
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
 	private SharedPreferences mSettings = null;
 	private AudioRecord mAudioRecord = null;
@@ -74,11 +77,11 @@ public class AACStream extends AudioStream implements Serializable {
 			}
 		}
 
-		if (mEncodingMode == mMediaRecorderMode) {
+		/*if (mEncodingMode == mMediaRecorderMode) {
 			mPacketizer = new AACADTSPacketizer();
 		} else {
 			mPacketizer = new AACLATMPacketizer();
-		}
+		}*/
 	}
 	
 	public void setAudioRecord(AudioRecord ar) {
@@ -102,27 +105,76 @@ public class AACStream extends AudioStream implements Serializable {
 	}
 
 	public void start() throws IllegalStateException, IOException {
-		super.start();
+		configure();
+		if(!mStreaming) {
+			super.start();
+		}
+	}
+	
+	public int getConfig() throws IllegalStateException, IOException {
+		if(!configured) {
+			configure();
+		}
+		return mConfig;
+	}
+	
+	public synchronized void configure() throws IllegalStateException, IOException {
+		super.configure();
+		int i=0;
+		for(; i<AUDIO_SAMPLING_RATES.length; i++) {
+			if(AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
+				mSamplingRateIndex = i;
+				break;
+			}
+		}
+		
+		if(i > 12) {
+			mQuality.samplingRate = 16000;
+		}
+		
+		if (mPacketizer==null) {
+			if (mEncodingMode == mMediaRecorderMode) {
+				mPacketizer = new AACADTSPacketizer();
+			} else { 
+				mPacketizer = new AACLATMPacketizer();
+			}		
+		}
+		
+		if (mEncodingMode == mMediaRecorderMode) {
+			testADTS();
+			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
+					"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
+		} else {
+			mProfile = 2; // AAC LC
+			mChannel = 1;
+			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+
+			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
+					"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";			
+		}
+		configured = true;
 	}
 
 	@Override
 	protected void encodeWithMediaRecorder() throws IOException {
 		testADTS();
-		((AACADTSPacketizer) mPacketizer).setSamplingRate(mActualSamplingRate);
+		((AACADTSPacketizer) mPacketizer).setSamplingRate(mQuality.samplingRate);
 		super.encodeWithMediaRecorder();
 	}
 
 	@Override
 	@SuppressLint({ "InlinedApi", "NewApi" })
 	protected void encodeWithMediaCodec() throws IOException {
-		int i = 0;
-		for (; i < AUDIO_SAMPLING_RATES.length; i++) {
-			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-				break;
-			}
-		}
-		if (i > 12)
-			mQuality.samplingRate = 24000;
+//		int i = 0;
+//		for (; i < AUDIO_SAMPLING_RATES.length; i++) {
+//			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
+//				break;
+//			}
+//		}
+//		if (i > 12)
+//			mQuality.samplingRate = 24000;
 
 		final int bufferSize = AudioRecord.getMinBufferSize(
 				mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO,
@@ -212,7 +264,7 @@ public class AACStream extends AudioStream implements Serializable {
 	}
 	
 	public String generateSessionDescription() throws IllegalStateException, IOException {
-		if (mEncodingMode == mMediaRecorderMode) {
+		/*if (mEncodingMode == mMediaRecorderMode) {
 
 			testADTS();
 			// TODO: streamType always 5 ? profile-level-id always 15 ?
@@ -235,7 +287,11 @@ public class AACStream extends AudioStream implements Serializable {
 			return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 			"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
 			"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";			
-		}
+		}*/
+		if (mSessionDescription == null)
+			throw new IllegalStateException(
+					"You need to call configure() first !");
+		return mSessionDescription;
 	}
 	
 	@SuppressLint("InlinedApi")
@@ -266,14 +322,14 @@ public class AACStream extends AudioStream implements Serializable {
 		if (mSettings!=null) {
 			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
 				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
-				mActualSamplingRate = Integer.valueOf(s[0]);
+				mQuality.samplingRate = Integer.valueOf(s[0]);
 				mConfig = Integer.valueOf(s[1]);
 				mChannel = Integer.valueOf(s[2]);
 				return;
 			}
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
+		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/bcast-test.adts";
 
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
@@ -299,7 +355,7 @@ public class AACStream extends AudioStream implements Serializable {
 		// We record for 1 sec
 		// TODO: use the MediaRecorder.OnInfoListener
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(1000);
 		} catch (InterruptedException e) {}
 
 		mMediaRecorder.stop();
@@ -322,7 +378,7 @@ public class AACStream extends AudioStream implements Serializable {
 		mSamplingRateIndex = (buffer[1]&0x3C)>>2 ;
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
-		mActualSamplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
+		mQuality.samplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
 
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
 		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
@@ -330,14 +386,14 @@ public class AACStream extends AudioStream implements Serializable {
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );
 		Log.i(TAG,"PROFILE: " + AUDIO_OBJECT_TYPES[ mProfile ] );
-		Log.i(TAG,"SAMPLING FREQUENCY: " + mActualSamplingRate );
+		Log.i(TAG,"SAMPLING FREQUENCY: " + mQuality.samplingRate );
 		Log.i(TAG,"CHANNEL: " + mChannel );
 
 		raf.close();
 
 		if (mSettings!=null) {
 			Editor editor = mSettings.edit();
-			editor.putString("aac-"+mQuality.samplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.putString("aac-"+mQuality.samplingRate, mQuality.samplingRate+","+mConfig+","+mChannel);
 			editor.commit();
 		}
 
